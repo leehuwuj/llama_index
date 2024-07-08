@@ -516,7 +516,8 @@ class SimpleDirectoryReader(BaseReader, ResourcesReaderMixin, FileSystemReaderMi
         """
         # TODO: make this less redundant
         default_file_reader_cls = SimpleDirectoryReader.supported_suffix_fn()
-        default_file_reader_suffix = list(default_file_reader_cls.keys())
+        # Combine default file readers with user-provided file readers
+        combined_extractors = {**default_file_reader_cls, **file_extractor}
         metadata: Optional[dict] = None
         documents: List[Document] = []
 
@@ -524,13 +525,12 @@ class SimpleDirectoryReader(BaseReader, ResourcesReaderMixin, FileSystemReaderMi
             metadata = file_metadata(str(input_file))
 
         file_suffix = input_file.suffix.lower()
-        if file_suffix in default_file_reader_suffix or file_suffix in file_extractor:
-            # use file readers
-            if file_suffix not in file_extractor:
-                # instantiate file reader if not already
-                reader_cls = default_file_reader_cls[file_suffix]
-                file_extractor[file_suffix] = reader_cls()
-            reader = file_extractor[file_suffix]
+        if file_suffix in combined_extractors:
+            # If the reader is a class, instantiate it
+            if isinstance(combined_extractors[file_suffix], type):
+                reader = combined_extractors[file_suffix]()
+            else:
+                reader = combined_extractors[file_suffix]
 
             # load data -- catch all errors except for ImportError
             try:
@@ -576,7 +576,8 @@ class SimpleDirectoryReader(BaseReader, ResourcesReaderMixin, FileSystemReaderMi
         """Load file asynchronously."""
         # TODO: make this less redundant
         default_file_reader_cls = SimpleDirectoryReader.supported_suffix_fn()
-        default_file_reader_suffix = list(default_file_reader_cls.keys())
+        # Combine default file readers with user-provided file readers
+        combined_extractors = {**default_file_reader_cls, **file_extractor}
         metadata: Optional[dict] = None
         documents: List[Document] = []
 
@@ -584,16 +585,12 @@ class SimpleDirectoryReader(BaseReader, ResourcesReaderMixin, FileSystemReaderMi
             metadata = self.file_metadata(str(input_file))
 
         file_suffix = input_file.suffix.lower()
-        if (
-            file_suffix in default_file_reader_suffix
-            or file_suffix in self.file_extractor
-        ):
-            # use file readers
-            if file_suffix not in self.file_extractor:
-                # instantiate file reader if not already
-                reader_cls = default_file_reader_cls[file_suffix]
-                self.file_extractor[file_suffix] = reader_cls()
-            reader = self.file_extractor[file_suffix]
+        if file_suffix in combined_extractors:
+            # If the reader is a class, instantiate it
+            if isinstance(combined_extractors[file_suffix], type):
+                reader = combined_extractors[file_suffix]()
+            else:
+                reader = combined_extractors[file_suffix]
 
             # load data -- catch all errors except for ImportError
             try:
